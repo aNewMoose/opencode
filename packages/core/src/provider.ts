@@ -4,7 +4,7 @@ import { Context, Effect, Layer, Option, Schema, Stream, Struct } from "effect"
 import { Provider } from "@opencode/schema/provider"
 import { Model } from "@opencode/schema/model"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
-import { HttpTimeout, type ProviderPackageDefinition } from "@opencode/ai/effect"
+import { HttpTimeout, type ProviderPackage } from "@opencode/ai/effect"
 import { isRecord } from "@opencode/util/record"
 import { Npm } from "@opencode/util/npm"
 import type { DeepMutable } from "./schema.js"
@@ -42,7 +42,6 @@ export class LoadError extends Schema.TaggedError<LoadError>()("Provider.LoadErr
   package: Schema.String,
   cause: Schema.Defect(),
 }) {}
-export type ProviderPackage = ProviderPackageDefinition
 
 const packages = new Map<string, Promise<unknown>>()
 const builtins = new Map<string, () => Promise<unknown>>([
@@ -95,6 +94,7 @@ const builtins = new Map<string, () => Promise<unknown>>([
   ["@opencode/ai/providers/digitalocean", () => import("@opencode/ai/providers/digitalocean")],
   ["@opencode/ai/providers/digitalocean/decisions", () => import("@opencode/ai/providers/digitalocean/decisions")],
   ["@opencode/ai/providers/digitalocean/images", () => import("@opencode/ai/providers/digitalocean/images")],
+  ["@opencode/ai/providers/digitalocean/responses", () => import("@opencode/ai/providers/digitalocean/responses")],
   ["@opencode/ai/providers/fireworks", () => import("@opencode/ai/providers/fireworks")],
   ["@opencode/ai/providers/google", () => import("@opencode/ai/providers/google")],
   ["@opencode/ai/providers/google/interactions", () => import("@opencode/ai/providers/google/interactions")],
@@ -114,10 +114,12 @@ const builtins = new Map<string, () => Promise<unknown>>([
   ["@opencode/ai/providers/groq", () => import("@opencode/ai/providers/groq")],
   ["@opencode/ai/providers/meta", () => import("@opencode/ai/providers/meta")],
   ["@opencode/ai/providers/meta/chat", () => import("@opencode/ai/providers/meta/chat")],
+  ["@opencode/ai/providers/meta/images", () => import("@opencode/ai/providers/meta/images")],
   ["@opencode/ai/providers/meta/messages", () => import("@opencode/ai/providers/meta/messages")],
   ["@opencode/ai/providers/meta/responses", () => import("@opencode/ai/providers/meta/responses")],
   ["@opencode/ai/providers/minimax", () => import("@opencode/ai/providers/minimax")],
   ["@opencode/ai/providers/minimax/chat", () => import("@opencode/ai/providers/minimax/chat")],
+  ["@opencode/ai/providers/minimax/images", () => import("@opencode/ai/providers/minimax/images")],
   ["@opencode/ai/providers/minimax/messages", () => import("@opencode/ai/providers/minimax/messages")],
   ["@opencode/ai/providers/minimax/responses", () => import("@opencode/ai/providers/minimax/responses")],
   ["@opencode/ai/providers/mistral", () => import("@opencode/ai/providers/mistral")],
@@ -143,9 +145,11 @@ const builtins = new Map<string, () => Promise<unknown>>([
   ["@opencode/ai/providers/openrouter", () => import("@opencode/ai/providers/openrouter")],
   ["@opencode/ai/providers/openrouter/decisions", () => import("@opencode/ai/providers/openrouter/decisions")],
   ["@opencode/ai/providers/openrouter/images", () => import("@opencode/ai/providers/openrouter/images")],
+  ["@opencode/ai/providers/openrouter/responses", () => import("@opencode/ai/providers/openrouter/responses")],
   ["@opencode/ai/providers/togetherai", () => import("@opencode/ai/providers/togetherai")],
   ["@opencode/ai/providers/typesafe-ai/decisions", () => import("@opencode/ai/providers/typesafe-ai/decisions")],
   ["@opencode/ai/providers/venice", () => import("@opencode/ai/providers/venice")],
+  ["@opencode/ai/providers/venice/responses", () => import("@opencode/ai/providers/venice/responses")],
   ["@opencode/ai/providers/vercel-ai-gateway", () => import("@opencode/ai/providers/vercel-ai-gateway")],
   ["@opencode/ai/providers/vercel-ai-gateway/chat", () => import("@opencode/ai/providers/vercel-ai-gateway/chat")],
   [
@@ -521,7 +525,7 @@ const layer = Layer.effect(
         },
       )
     })
-    yield* bus.subscribe([Integration.Event.Updated, Credential.Event.Updated, Credential.Event.Switched]).pipe(
+    yield* bus.subscribe([Integration.Event.Updated, Credential.Event.Switched]).pipe(
       Stream.runForEach(() => notify),
       Effect.forkScoped({ startImmediately: true }),
     )
@@ -561,5 +565,5 @@ const importPackage = Effect.fn("Provider.importPackage")(function* (
       cause: new Error(`Provider package ${specifier} does not export model(modelID, settings)`),
     })
   }
-  return module as ProviderPackageDefinition
+  return module as ProviderPackage.Definition
 })

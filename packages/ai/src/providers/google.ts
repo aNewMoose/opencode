@@ -1,6 +1,6 @@
 import type { RouteDefaultsInput } from "../route/client.js"
 import { Auth } from "../route/auth.js"
-import type { ProviderAuthOption } from "../route/auth-options.js"
+import { AuthOptions, type ProviderAuthOption } from "../route/auth-options.js"
 import { MediaRoute } from "../route/media.js"
 import type { ProviderPackage } from "../provider-package.js"
 import { ProviderID, type ModelID, type ProviderOptions } from "../schema/index.js"
@@ -31,16 +31,12 @@ export type Config = RouteDefaultsInput &
 
 export type Settings = ProviderPackage.Settings &
   Gemini.ProviderOptionsInput & {
-    readonly apiKey?: string
+    readonly apiKey?: string | false
     readonly baseURL?: string
   }
 
-const auth = (options: ProviderAuthOption<"optional">) => {
-  if ("auth" in options && options.auth) return options.auth
-  return Auth.optional("apiKey" in options ? options.apiKey : undefined, "apiKey")
-    .orElse(Auth.config("GOOGLE_GENERATIVE_AI_API_KEY"))
-    .pipe(Auth.header("x-goog-api-key"))
-}
+const auth = (options: ProviderAuthOption<"optional">) =>
+  AuthOptions.apiKey(options, "GOOGLE_GENERATIVE_AI_API_KEY", Auth.header("x-goog-api-key"))
 
 const configuredRoute = (input: Config) => {
   const { apiKey: _, auth: _auth, baseURL, ...rest } = input
@@ -70,14 +66,14 @@ export const configure = (input: Config = {}) => {
 }
 
 export const provider = configure()
-export const model: ProviderPackage.Definition<Settings, Gemini.ProviderOptionsInput>["model"] = (modelID, settings) =>
+export const model: ProviderPackage.Model<Settings, Gemini.ProviderOptionsInput> = (modelID, settings) =>
   configure(config(settings)).model(modelID)
-export const imageModel = (modelID: string, settings: Settings) => {
+export const imageModel = (modelID: string, settings?: Settings) => {
   const input = config(settings)
   return configure(input).image(modelID, input.providerOptions)
 }
 
-function config({ apiKey, baseURL, body, headers, ...providerOptions }: Settings) {
+function config({ apiKey, baseURL, body, headers, ...providerOptions }: Settings = {}) {
   return {
     apiKey,
     baseURL,
